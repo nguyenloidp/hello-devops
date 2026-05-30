@@ -10,16 +10,16 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Show env
+      - name: Show environment
         run: |
           whoami
           kubectl get nodes
           docker version
 
-      - name: Build Docker image
+      - name: Build image
         run: |
           docker build -t hello-devops:${{ github.sha }} .
 
@@ -27,10 +27,15 @@ jobs:
         run: |
           k3d image import hello-devops:${{ github.sha }} -c dev
 
-      - name: Update deployment image
+      - name: Deploy new image
         run: |
           kubectl set image deployment/hello-devops \
           hello-devops=hello-devops:${{ github.sha }}
+
+      - name: Inject version into pod
+        run: |
+          kubectl set env deployment/hello-devops \
+          APP_VERSION=${{ github.sha }}
 
       - name: Wait rollout
         run: |
