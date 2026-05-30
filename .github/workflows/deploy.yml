@@ -1,4 +1,4 @@
-name: Deploy To K8s
+name: CI-CD Deploy To K8s
 
 on:
   push:
@@ -13,11 +13,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show info
+      - name: Show env
         run: |
           whoami
           kubectl get nodes
+          docker version
 
-      - name: Restart deployment
+      - name: Build Docker image
         run: |
-          kubectl rollout restart deployment hello-devops
+          docker build -t hello-devops:${{ github.sha }} .
+
+      - name: Import image into k3d
+        run: |
+          k3d image import hello-devops:${{ github.sha }} -c dev
+
+      - name: Update deployment image
+        run: |
+          kubectl set image deployment/hello-devops \
+          hello-devops=hello-devops:${{ github.sha }}
+
+      - name: Wait rollout
+        run: |
+          kubectl rollout status deployment/hello-devops
